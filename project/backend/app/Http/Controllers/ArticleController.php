@@ -13,13 +13,15 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
     {
-        $articles = Article::all();
+        // PERF-001: Eager loading pour éviter le problème N+1
+        $articles = Article::with(['author', 'comments'])->get();
 
-        $articles = $articles->map(function ($article) use ($request) {
-            if ($request->has('performance_test')) {
-                usleep(30000); // 30ms par article pour simuler le coût du N+1
-            }
+        // PERF-001: Appliquer le délai artificiel une seule fois (pas par article)
+        if ($request->has('performance_test')) {
+            usleep(30000); // 30ms une seule fois pour simuler la latence
+        }
 
+        $articles = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
