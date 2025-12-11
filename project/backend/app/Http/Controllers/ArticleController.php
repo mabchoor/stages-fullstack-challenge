@@ -63,6 +63,8 @@ class ArticleController extends Controller
 
     /**
      * Search articles.
+     * Fixed: Use Eloquent with prepared statements (secure against SQL injection)
+     * Search in both title and content fields
      */
     public function search(Request $request)
     {
@@ -72,18 +74,19 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        $articles = DB::select(
-            "SELECT * FROM articles WHERE title LIKE '%" . $query . "%'"
-        );
+        // Utiliser Eloquent avec WHERE clause sécurisée (prepared statements automatiques)
+        $articles = Article::where('title', 'LIKE', "%{$query}%")
+            ->orWhere('content', 'LIKE', "%{$query}%")
+            ->get();
 
-        $results = array_map(function ($article) {
+        $results = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200),
                 'published_at' => $article->published_at,
             ];
-        }, $articles);
+        });
 
         return response()->json($results);
     }
