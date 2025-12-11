@@ -57,4 +57,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Comment::class);
     }
+
+    /**
+     * Hash the password when setting it.
+     */
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['password'] = \Illuminate\Support\Facades\Hash::make($value);
+    }
 }
