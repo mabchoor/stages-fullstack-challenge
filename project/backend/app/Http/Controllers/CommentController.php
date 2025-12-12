@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Article;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CommentController extends Controller
 {
@@ -23,6 +24,7 @@ class CommentController extends Controller
 
     /**
      * Store a new comment.
+     * PERF-003: Invalidate cache after creation
      */
     public function store(Request $request)
     {
@@ -35,11 +37,16 @@ class CommentController extends Controller
         $comment = Comment::create($validated);
         $comment->load('user');
 
+        // Invalidate caches (comments affect stats)
+        Cache::forget('articles.index');
+        Cache::forget('stats');
+
         return response()->json($comment, 201);
     }
 
     /**
      * Remove the specified comment.
+     * PERF-003: Invalidate cache after deletion
      */
     public function destroy($id)
     {
@@ -47,6 +54,10 @@ class CommentController extends Controller
         $articleId = $comment->article_id;
 
         $comment->delete();
+
+        // Invalidate caches (comments affect stats)
+        Cache::forget('articles.index');
+        Cache::forget('stats');
 
         $remainingComments = Comment::where('article_id', $articleId)->get();
         $firstComment = $remainingComments[0];
@@ -60,6 +71,7 @@ class CommentController extends Controller
 
     /**
      * Update a comment.
+     * PERF-003: Invalidate cache after update (though content doesn't affect stats, keep consistency)
      */
     public function update(Request $request, $id)
     {
@@ -70,6 +82,10 @@ class CommentController extends Controller
         ]);
 
         $comment->update($validated);
+
+        // Invalidate caches for consistency
+        Cache::forget('articles.index');
+        Cache::forget('stats');
 
         return response()->json($comment);
     }

@@ -5,13 +5,30 @@ namespace App\Http\Controllers;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ArticleController extends Controller
 {
     /**
      * Display a listing of articles.
+     * PERF-003: Cached for 1 minute
      */
     public function index(Request $request)
+    {
+        // Skip cache for performance test mode
+        if ($request->has('performance_test')) {
+            return $this->getArticles($request);
+        }
+
+        return Cache::remember('articles.index', 60, function () use ($request) {
+            return $this->getArticles($request);
+        });
+    }
+
+    /**
+     * Get articles data (extracted for cache reuse).
+     */
+    private function getArticles(Request $request)
     {
         // PERF-001: Eager loading pour éviter le problème N+1
         $articles = Article::with(['author', 'comments'])->get();
@@ -92,6 +109,7 @@ class ArticleController extends Controller
 
     /**
      * Store a newly created article.
+     * PERF-003: Invalidate cache after creation
      */
     public function store(Request $request)
     {
@@ -110,11 +128,16 @@ class ArticleController extends Controller
             'published_at' => now(),
         ]);
 
+        // Invalidate caches
+        Cache::forget('articles.index');
+        Cache::forget('stats');
+
         return response()->json($article, 201);
     }
 
     /**
      * Update the specified article.
+     * PERF-003: Invalidate cache after update
      */
     public function update(Request $request, $id)
     {
@@ -127,16 +150,25 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
+        // Invalidate caches
+        Cache::forget('articles.index');
+        Cache::forget('stats');
+
         return response()->json($article);
     }
 
     /**
      * Remove the specified article.
+     * PERF-003: Invalidate cache after deletion
      */
     public function destroy($id)
     {
         $article = Article::findOrFail($id);
         $article->delete();
+
+        // Invalidate caches
+        Cache::forget('articles.index');
+        Cache::forget('stats');
 
         return response()->json(['message' => 'Article deleted successfully']);
     }
