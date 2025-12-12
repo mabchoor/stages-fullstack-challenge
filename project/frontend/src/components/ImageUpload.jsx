@@ -93,9 +93,46 @@ function ImageUpload() {
           marginBottom: '1rem',
           fontSize: '0.85em'
         }}>
-          <strong>Détails :</strong>
-          <div>Path: {uploadedImage.path}</div>
-          <div>Size: {(uploadedImage.size / 1024).toFixed(2)} KB</div>
+          <strong>✅ Image optimisée avec succès !</strong>
+          <div>Taille originale: {(uploadedImage.original_size / 1024).toFixed(2)} KB</div>
+          <div>Taille optimisée: {(uploadedImage.optimized_size / 1024).toFixed(2)} KB</div>
+          <div>Réduction: <strong>{uploadedImage.reduction_percent}%</strong></div>
+          
+          {uploadedImage.images && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <strong>Versions générées:</strong>
+              <ul style={{ marginTop: '0.3rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
+                <li>Large: {uploadedImage.images.large.width}x{uploadedImage.images.large.height} ({(uploadedImage.images.large.size / 1024).toFixed(1)} KB)</li>
+                <li>Medium: {uploadedImage.images.medium.width}x{uploadedImage.images.medium.height} ({(uploadedImage.images.medium.size / 1024).toFixed(1)} KB)</li>
+                <li>Thumbnail: {uploadedImage.images.thumbnail.width}x{uploadedImage.images.thumbnail.height} ({(uploadedImage.images.thumbnail.size / 1024).toFixed(1)} KB)</li>
+                <li>WebP: {(uploadedImage.images.webp.size / 1024).toFixed(1)} KB</li>
+              </ul>
+              
+              {/* PERF-002: Display optimized image with lazy loading, WebP support, and srcset */}
+              <div style={{ marginTop: '1rem' }}>
+                <picture>
+                  <source 
+                    srcSet={`/storage/images/${uploadedImage.images.webp.filename}`} 
+                    type="image/webp" 
+                  />
+                  <img
+                    src={`/storage/images/${uploadedImage.images.large.filename}`}
+                    srcSet={`
+                      /storage/images/${uploadedImage.images.thumbnail.filename} 300w,
+                      /storage/images/${uploadedImage.images.medium.filename} 600w,
+                      /storage/images/${uploadedImage.images.large.filename} 1200w
+                    `}
+                    sizes="(max-width: 600px) 300px, (max-width: 1200px) 600px, 1200px"
+                    width={uploadedImage.images.large.width}
+                    height={uploadedImage.images.large.height}
+                    loading="lazy"
+                    alt="Uploaded image"
+                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '4px', marginTop: '0.5rem' }}
+                  />
+                </picture>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
